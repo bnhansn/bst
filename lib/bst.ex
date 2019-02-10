@@ -7,18 +7,24 @@ defmodule BST do
 
   defstruct root: nil, comparator: nil, size: 0
 
+  @typedoc "The data structure stored on the data key for each node in the tree"
   @type element :: term()
-  @type default :: any()
-  @typedoc "Function that returns truthy if the first argument is less than or equal to the second argument"
+
+  @typedoc """
+  Function that returns `true` if the first argument is less than or equal to the second argument
+
+  Used to determine whether to place new nodes as a left or right subtree
+  """
   @type comparator :: (element(), element() -> as_boolean(term()))
-  @type t :: %__MODULE__{
+
+  @type tree :: %__MODULE__{
           root: Node.t() | nil,
           comparator: comparator(),
           size: integer()
         }
 
   @doc """
-  Creates a new tree
+  Creates a new `tree`
 
   ## Examples
 
@@ -37,7 +43,7 @@ defmodule BST do
       }
 
   """
-  @spec new(element() | [element()], comparator()) :: t()
+  @spec new(element() | [element()], comparator()) :: tree()
   def new(elements \\ [], comparator \\ fn a, b -> a <= b end)
 
   def new([], comparator), do: %__MODULE__{comparator: comparator}
@@ -55,34 +61,35 @@ defmodule BST do
   end
 
   @doc """
-  Adds a node to a tree
+  Adds a node to a `tree`
 
   ## Examples
 
-      iex> tree = BST.insert(BST.new(1), 2)
+      iex> tree = BST.new(1)
+      iex> tree = BST.insert(tree, 2)
       iex> tree.root
       %BST.Node{data: 1, left: nil, right: %BST.Node{data: 2, left: nil, right: nil}}
 
   """
-  @spec insert(t(), element()) :: t()
+  @spec insert(tree(), element()) :: tree()
   def insert(%__MODULE__{root: node, comparator: comparator, size: size} = tree, element) do
-    %__MODULE__{tree | root: insert(node, element, comparator), size: size + 1}
+    %__MODULE__{tree | root: insert_node(node, element, comparator), size: size + 1}
   end
 
-  def insert(nil, element, _comparator) do
+  defp insert_node(nil, element, _comparator) do
     %Node{data: element, left: nil, right: nil}
   end
 
-  def insert(%Node{data: parent, left: left, right: right} = node, child, comparator) do
-    if comparator.(child, parent) do
-      %Node{node | left: insert(left, child, comparator)}
+  defp insert_node(%Node{data: elem1, left: left, right: right} = node, elem2, comparator) do
+    if comparator.(elem2, elem1) do
+      %Node{node | left: insert_node(left, elem2, comparator)}
     else
-      %Node{node | right: insert(right, child, comparator)}
+      %Node{node | right: insert_node(right, elem2, comparator)}
     end
   end
 
   @doc """
-  Removes a node from a tree
+  Removes the first node from a `tree` when `fun` returns `true` using `element` as the first argument
 
   ## Examples
 
@@ -96,24 +103,29 @@ defmodule BST do
       %BST.Node{data: %{id: 2, name: "Bob"}, left: nil, right: nil}
 
   """
-  @spec remove(t(), element()) :: t()
+  @spec remove(tree(), element()) :: tree()
   def remove(
         %__MODULE__{root: node, comparator: comparator, size: size} = tree,
         element,
         fun \\ fn a, b -> a == b end
       ) do
-    %__MODULE__{tree | root: remove(node, element, comparator, fun), size: size - 1}
+    %__MODULE__{tree | root: remove_node(node, element, comparator, fun), size: size - 1}
   end
 
-  def remove(%Node{data: elem1, left: left, right: right} = node, elem2, comparator, fun) do
+  defp remove_node(%Node{data: elem1, left: left, right: right} = node, elem2, comparator, fun) do
     cond do
-      fun.(elem1, elem2) -> promote(left, right, comparator, fun)
-      comparator.(elem2, elem1) -> %Node{node | left: remove(left, elem2, comparator, fun)}
-      true -> %Node{node | right: remove(right, elem2, comparator, fun)}
+      fun.(elem2, elem1) ->
+        promote(left, right, comparator, fun)
+
+      comparator.(elem2, elem1) ->
+        %Node{node | left: remove_node(left, elem2, comparator, fun)}
+
+      true ->
+        %Node{node | right: remove_node(right, elem2, comparator, fun)}
     end
   end
 
-  def remove(nil, _element, _comparator, _fun), do: nil
+  defp remove_node(nil, _element, _comparator, _fun), do: nil
 
   defp promote(nil, nil, _comparator, _fun), do: nil
   defp promote(%Node{} = left, nil, _comparator, _fun), do: left
@@ -121,7 +133,7 @@ defmodule BST do
 
   defp promote(%Node{} = left, %Node{} = right, comparator, fun) do
     %Node{data: element} = leftmost_child(right)
-    right = remove(right, element, comparator, fun)
+    right = remove_node(right, element, comparator, fun)
     %Node{data: element, left: left, right: right}
   end
 
@@ -129,7 +141,7 @@ defmodule BST do
   defp leftmost_child(%Node{left: %Node{} = node}), do: leftmost_child(node)
 
   @doc """
-  Removes all nodes from the tree
+  Removes all nodes from a `tree`
 
   ## Examples
 
@@ -139,12 +151,13 @@ defmodule BST do
       nil
 
   """
+  @spec clear(tree()) :: tree()
   def clear(%__MODULE__{} = tree) do
     %__MODULE__{tree | root: nil, size: 0}
   end
 
   @doc """
-  Returns the first `element` which `fun` returns true for using `element` as the first argument
+  Returns the first `element` which `fun` returns `true` for using `element` as the first argument
 
   ## Examples
 
@@ -156,27 +169,23 @@ defmodule BST do
       %{id: 1, name: "Alice"}
 
   """
-  @spec find(t(), element(), (element() -> any())) :: element() | nil
-  def find(
-        %__MODULE__{root: node, comparator: comparator},
-        element,
-        fun \\ fn a, b -> a == b end
-      ) do
-    find(node, element, comparator, fun)
+  @spec find(tree(), element(), (element() -> any())) :: element() | nil
+  def find(%__MODULE__{} = tree, element, fun \\ fn a, b -> a == b end) do
+    find_node(tree.root, element, tree.comparator, fun)
   end
 
-  def find(nil, _element, _comparator, _fun), do: nil
+  defp find_node(nil, _element, _comparator, _fun), do: nil
 
-  def find(%Node{data: elem1, left: left, right: right}, elem2, comparator, fun) do
+  defp find_node(%Node{data: elem1, left: left, right: right}, elem2, comparator, fun) do
     cond do
       fun.(elem1, elem2) -> elem1
-      comparator.(elem2, elem1) -> find(left, elem2, comparator, fun)
-      true -> find(right, elem2, comparator, fun)
+      comparator.(elem2, elem1) -> find_node(left, elem2, comparator, fun)
+      true -> find_node(right, elem2, comparator, fun)
     end
   end
 
   @doc """
-  Returns a list of a tree's `element`s in order
+  Returns a `list` of a `tree`'s `element`s in order
 
   ## Examples
 
@@ -187,22 +196,22 @@ defmodule BST do
       [-1, 0, 1]
 
   """
-  @spec to_list(t()) :: [element()]
-  def to_list(%__MODULE__{root: root}) do
-    root
-    |> to_list([])
+  @spec to_list(tree()) :: [element()]
+  def to_list(%__MODULE__{} = tree) do
+    tree.root
+    |> list_nodes([])
     |> Enum.reverse()
   end
 
-  def to_list(nil, acc), do: acc
+  defp list_nodes(nil, acc), do: acc
 
-  def to_list(%Node{data: data, left: left, right: right}, acc) do
-    lower_values = to_list(left, acc)
-    to_list(right, [data | lower_values])
+  defp list_nodes(%Node{data: data, left: left, right: right}, acc) do
+    lower_values = list_nodes(left, acc)
+    list_nodes(right, [data | lower_values])
   end
 
   @doc """
-  Returns the minimum `element` in the tree, or nil if empty
+  Returns the minimum `element` in a `tree`, or `nil` if empty
 
   ## Examples
 
@@ -211,14 +220,14 @@ defmodule BST do
       1
 
   """
-  @spec min(t()) :: element() | nil
-  def min(%__MODULE__{root: nil}), do: nil
+  @spec min(tree()) :: element() | nil
+  def min(%__MODULE__{root: nil} = _tree), do: nil
   def min(%__MODULE__{root: node}), do: min(node)
   def min(%Node{data: data, left: nil}), do: data
   def min(%Node{left: %Node{} = node}), do: min(node)
 
   @doc """
-  Returns the maximum `element` in the tree, or nil if empty
+  Returns the maximum `element` in a `tree`, or `nil` if empty
 
   ## Examples
 
@@ -227,8 +236,8 @@ defmodule BST do
       3
 
   """
-  @spec max(t()) :: element() | nil
-  def max(%__MODULE__{root: nil}), do: nil
+  @spec max(tree()) :: element() | nil
+  def max(%__MODULE__{root: nil} = _tree), do: nil
   def max(%__MODULE__{root: node}), do: max(node)
   def max(%Node{data: data, right: nil}), do: data
   def max(%Node{right: %Node{} = node}), do: max(node)
