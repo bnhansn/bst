@@ -1,6 +1,6 @@
 defmodule BST do
   @moduledoc """
-  Binary Search Tree
+  Binary search tree abstract data structure
   """
 
   alias BST.Node
@@ -144,7 +144,7 @@ defmodule BST do
   end
 
   @doc """
-  Returns the first element which `fun` returns true for using `element` as the first argument
+  Returns the first `element` which `fun` returns true for using `element` as the first argument
 
   ## Examples
 
@@ -176,7 +176,7 @@ defmodule BST do
   end
 
   @doc """
-  Returns the values of a tree's branch in order
+  Returns a list of a tree's `element`s in order
 
   ## Examples
 
@@ -200,4 +200,36 @@ defmodule BST do
     lower_values = to_list(left, acc)
     to_list(right, [data | lower_values])
   end
+
+  @doc """
+  Returns the minimum `element` in the tree, or nil if empty
+
+  ## Examples
+
+      iex> tree = BST.new([2, 1, 3])
+      iex> BST.min(tree)
+      1
+
+  """
+  @spec min(t()) :: element() | nil
+  def min(%__MODULE__{root: nil}), do: nil
+  def min(%__MODULE__{root: node}), do: min(node)
+  def min(%Node{data: data, left: nil}), do: data
+  def min(%Node{left: %Node{} = node}), do: min(node)
+
+  @doc """
+  Returns the maximum `element` in the tree, or nil if empty
+
+  ## Examples
+
+      iex> tree = BST.new([2, 3, 1])
+      iex> BST.max(tree)
+      3
+
+  """
+  @spec max(t()) :: element() | nil
+  def max(%__MODULE__{root: nil}), do: nil
+  def max(%__MODULE__{root: node}), do: max(node)
+  def max(%Node{data: data, right: nil}), do: data
+  def max(%Node{right: %Node{} = node}), do: max(node)
 end

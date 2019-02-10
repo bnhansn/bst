@@ -281,4 +281,28 @@ defmodule BSTTest do
 
     assert %BST{root: nil} = BST.clear(tree)
   end
+
+  test "returns the minimum element in the tree" do
+    tree = BST.new([5, 3, 4, 1, 6, 2])
+
+    assert 1 == BST.min(tree)
+  end
+
+  test "min returns nil if tree is empty" do
+    tree = BST.new()
+
+    assert nil == BST.min(tree)
+  end
+
+  test "returns the maximum element in the tree" do
+    tree = BST.new([5, 3, 4, 1, 6, 2])
+
+    assert 6 == BST.max(tree)
+  end
+
+  test "max returns nil if tree is empty" do
+    tree = BST.new()
+
+    assert nil == BST.max(tree)
+  end
 end
