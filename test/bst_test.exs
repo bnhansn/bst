@@ -88,7 +88,7 @@ defmodule BSTTest do
   end
 
   test "removes lower node" do
-    tree = BST.insert(BST.new(0), -1)
+    tree = BST.new([0, -1])
 
     assert tree.size == 2
     assert tree.root.left.data == -1
@@ -101,7 +101,7 @@ defmodule BSTTest do
   end
 
   test "removes higher node" do
-    tree = BST.insert(BST.new(0), 1)
+    tree = BST.new([0, 1])
 
     assert tree.size == 2
     assert tree.root.right.data == 1
@@ -114,12 +114,7 @@ defmodule BSTTest do
   end
 
   test "removes nested nodes" do
-    tree =
-      BST.new(0)
-      |> BST.insert(-2)
-      |> BST.insert(-1)
-      |> BST.insert(2)
-      |> BST.insert(1)
+    tree = BST.new([0, -2, -1, 2, 1])
 
     assert tree.size == 5
     assert tree.root.left.right.data == -1
@@ -137,26 +132,32 @@ defmodule BSTTest do
     refute BST.find(tree, 1)
   end
 
-  test "reconnects broken branches when node is removed" do
-    tree =
-      BST.new(0)
-      |> BST.insert(-2)
-      |> BST.insert(-1)
-      |> BST.insert(2)
-      |> BST.insert(1)
-
-    assert tree.size == 5
-    assert tree.root.left.data == -2
-    assert tree.root.right.data == 2
-
-    tree =
-      tree
-      |> BST.remove(-2)
-      |> BST.remove(2)
+  test "promotes the left subtree of a removed node if its right subtree is nil" do
+    tree = BST.new([0, 2, 1])
 
     assert tree.size == 3
-    assert tree.root.left.data == -1
+    assert tree.root.right.data == 2
+    assert tree.root.right.right == nil
+    assert tree.root.right.left.data == 1
+
+    tree = BST.remove(tree, 2)
+
+    assert tree.size == 2
     assert tree.root.right.data == 1
+  end
+
+  test "promotes the right subtree of a removed node if its left subtree is nil" do
+    tree = BST.new([0, 1, 2])
+
+    assert tree.size == 3
+    assert tree.root.right.data == 1
+    assert tree.root.right.left == nil
+    assert tree.root.right.right.data == 2
+
+    tree = BST.remove(tree, 1)
+
+    assert tree.size == 2
+    assert tree.root.right.data == 2
   end
 
   test "removes a node with a given comparator" do
@@ -173,6 +174,20 @@ defmodule BSTTest do
     refute BST.find(tree, %{id: 3}, fn a, b -> a.id == b.id end)
   end
 
+  test "promotes leftmost child of right subtree when a removed node has a left and right subtree" do
+    tree = BST.new([0, 5, 3, 7, 2, 4, 6, 8])
+
+    assert tree.size == 8
+    assert tree.root.right.data == 5
+    assert tree.root.right.right.data == 7
+    assert tree.root.right.right.left.data == 6
+
+    tree = BST.remove(tree, 5)
+
+    assert tree.size == 7
+    assert tree.root.right.data == 6
+  end
+
   test "finds an element in a tree" do
     tree = BST.new(0)
 
@@ -185,7 +200,13 @@ defmodule BSTTest do
     assert %{id: 1, name: "Alice"} == BST.find(tree, %{id: 1}, fn a, b -> a.id == b.id end)
   end
 
-  test "returns nil if an element is not found" do
+  test "find returns nil if the tree is empty" do
+    tree = BST.new()
+
+    assert nil == BST.find(tree, 1)
+  end
+
+  test "find returns nil if an element is not found" do
     tree = BST.new(0)
 
     assert nil == BST.find(tree, 1)

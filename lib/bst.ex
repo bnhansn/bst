@@ -107,7 +107,7 @@ defmodule BST do
 
   def remove(%Node{data: elem1, left: left, right: right} = node, elem2, comparator, fun) do
     cond do
-      fun.(elem1, elem2) -> promote(left, right)
+      fun.(elem1, elem2) -> promote(left, right, comparator, fun)
       comparator.(elem2, elem1) -> %Node{node | left: remove(left, elem2, comparator, fun)}
       true -> %Node{node | right: remove(right, elem2, comparator, fun)}
     end
@@ -115,9 +115,18 @@ defmodule BST do
 
   def remove(nil, _element, _comparator, _fun), do: nil
 
-  defp promote(nil, nil), do: nil
-  defp promote(%Node{} = left_node, nil), do: left_node
-  defp promote(nil, %Node{} = right_node), do: right_node
+  defp promote(nil, nil, _comparator, _fun), do: nil
+  defp promote(%Node{} = left, nil, _comparator, _fun), do: left
+  defp promote(nil, %Node{} = right, _comparator, _fun), do: right
+
+  defp promote(%Node{} = left, %Node{} = right, comparator, fun) do
+    %Node{data: element} = leftmost_child(right)
+    right = remove(right, element, comparator, fun)
+    %Node{data: element, left: left, right: right}
+  end
+
+  defp leftmost_child(%Node{left: nil} = node), do: node
+  defp leftmost_child(%Node{left: %Node{} = node}), do: leftmost_child(node)
 
   @doc """
   Removes all nodes from the tree
