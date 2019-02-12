@@ -5,23 +5,22 @@ defmodule BST do
 
   alias BST.Node
 
-  defstruct root: nil, comparator: nil, size: 0
+  defstruct [:comparator, :root]
 
   @typedoc "The data structure stored on the data key for each node in the tree"
   @type element :: term()
 
   @typedoc """
-  Function that returns `true` if the first argument is less than or equal to the second argument
+  Function used to determine whether to place new nodes as a left or right subtree
 
-  Used to determine whether to place new nodes as a left or right subtree
+  Returns
+  - 0 if a == b
+  - negative integer if a < b
+  - positive integer if a > b
   """
-  @type comparator :: (element(), element() -> as_boolean(term()))
+  @type comparator :: (a :: element(), b :: element() -> integer())
 
-  @type tree :: %__MODULE__{
-          root: Node.t() | nil,
-          comparator: comparator(),
-          size: integer()
-        }
+  @type tree :: %__MODULE__{root: Node.t() | nil, comparator: comparator()}
 
   @doc """
   Creates a new `tree`
@@ -34,7 +33,7 @@ defmodule BST do
       iex> tree = BST.new([0, 1])
       iex> tree.root
       %BST.Node{data: 0, left: nil, right: %BST.Node{data: 1, left: nil, right: nil}}
-      iex> tree = BST.new([%{id: 1, name: "Alice"}, %{id: 2, name: "Bob"}], fn a, b -> a.id <= b.id end)
+      iex> tree = BST.new([%{id: 1, name: "Alice"}, %{id: 2, name: "Bob"}], fn a, b -> a.id - b.id end)
       iex> tree.root
       %BST.Node{
         data: %{id: 1, name: "Alice"},
@@ -44,7 +43,7 @@ defmodule BST do
 
   """
   @spec new(element() | [element()], comparator()) :: tree()
-  def new(elements \\ [], comparator \\ fn a, b -> a <= b end)
+  def new(elements \\ [], comparator \\ fn a, b -> a - b end)
 
   def new([], comparator), do: %__MODULE__{comparator: comparator}
 
@@ -63,6 +62,9 @@ defmodule BST do
   @doc """
   Adds a node to a `tree`
 
+  Resolves conflicts using `fun` where `a` is the existing `element` and `b` is
+  the new `element`. Defaults to replacing with the new `element`.
+
   ## Examples
 
       iex> tree = BST.new(1)
@@ -71,25 +73,23 @@ defmodule BST do
       %BST.Node{data: 1, left: nil, right: %BST.Node{data: 2, left: nil, right: nil}}
 
   """
-  @spec insert(tree(), element()) :: tree()
-  def insert(%__MODULE__{root: node, comparator: comparator, size: size} = tree, element) do
-    %__MODULE__{tree | root: insert_node(node, element, comparator), size: size + 1}
+  @spec insert(tree(), element(), (element(), element() -> element())) :: tree()
+  def insert(%__MODULE__{} = tree, element, fun \\ fn _a, b -> b end) do
+    %__MODULE__{tree | root: do_insert(tree.root, element, tree.comparator, fun)}
   end
 
-  defp insert_node(nil, element, _comparator) do
-    %Node{data: element, left: nil, right: nil}
-  end
+  defp do_insert(nil, element, _comparator, _fun), do: %Node{data: element}
 
-  defp insert_node(%Node{data: elem1, left: left, right: right} = node, elem2, comparator) do
-    if comparator.(elem2, elem1) do
-      %Node{node | left: insert_node(left, elem2, comparator)}
-    else
-      %Node{node | right: insert_node(right, elem2, comparator)}
+  defp do_insert(%Node{data: elem1, left: left, right: right} = node, elem2, comparator, fun) do
+    case compare(elem2, elem1, comparator) do
+      :eq -> %Node{node | data: fun.(elem1, elem2)}
+      :lt -> %Node{node | left: do_insert(left, elem2, comparator, fun)}
+      :gt -> %Node{node | right: do_insert(right, elem2, comparator, fun)}
     end
   end
 
   @doc """
-  Removes the first node from a `tree` when `fun` returns `true` using `element` as the first argument
+  Removes a node from a `tree` using the `comparator` for lookup
 
   ## Examples
 
@@ -97,43 +97,34 @@ defmodule BST do
       iex> tree = BST.remove(tree, 1)
       iex> tree.root
       %BST.Node{data: 0, left: nil, right: nil}
-      iex> tree = BST.new([%{id: 1, name: "Alice"}, %{id: 2, name: "Bob"}], fn a, b -> a.id <= b.id end)
-      iex> tree = BST.remove(tree, %{id: 1}, fn a, b -> a.id == b.id end)
+      iex> tree = BST.new([%{id: 1, name: "Alice"}, %{id: 2, name: "Bob"}], fn a, b -> a.id - b.id end)
+      iex> tree = BST.remove(tree, %{id: 1})
       iex> tree.root
       %BST.Node{data: %{id: 2, name: "Bob"}, left: nil, right: nil}
 
   """
   @spec remove(tree(), element()) :: tree()
-  def remove(
-        %__MODULE__{root: node, comparator: comparator, size: size} = tree,
-        element,
-        fun \\ fn a, b -> a == b end
-      ) do
-    %__MODULE__{tree | root: remove_node(node, element, comparator, fun), size: size - 1}
+  def remove(%__MODULE__{} = tree, element) do
+    %__MODULE__{tree | root: do_remove(tree.root, element, tree.comparator)}
   end
 
-  defp remove_node(%Node{data: elem1, left: left, right: right} = node, elem2, comparator, fun) do
-    cond do
-      fun.(elem2, elem1) ->
-        promote(left, right, comparator, fun)
-
-      comparator.(elem2, elem1) ->
-        %Node{node | left: remove_node(left, elem2, comparator, fun)}
-
-      true ->
-        %Node{node | right: remove_node(right, elem2, comparator, fun)}
+  defp do_remove(%Node{data: elem1, left: left, right: right} = node, elem2, comparator) do
+    case compare(elem2, elem1, comparator) do
+      :eq -> promote(left, right, comparator)
+      :lt -> %Node{node | left: do_remove(left, elem2, comparator)}
+      :gt -> %Node{node | right: do_remove(right, elem2, comparator)}
     end
   end
 
-  defp remove_node(nil, _element, _comparator, _fun), do: nil
+  defp do_remove(nil, _element, _comparator), do: nil
 
-  defp promote(nil, nil, _comparator, _fun), do: nil
-  defp promote(%Node{} = left, nil, _comparator, _fun), do: left
-  defp promote(nil, %Node{} = right, _comparator, _fun), do: right
+  defp promote(nil, nil, _comparator), do: nil
+  defp promote(%Node{} = left, nil, _comparator), do: left
+  defp promote(nil, %Node{} = right, _comparator), do: right
 
-  defp promote(%Node{} = left, %Node{} = right, comparator, fun) do
+  defp promote(%Node{} = left, %Node{} = right, comparator) do
     %Node{data: element} = leftmost_child(right)
-    right = remove_node(right, element, comparator, fun)
+    right = do_remove(right, element, comparator)
     %Node{data: element, left: left, right: right}
   end
 
@@ -152,35 +143,34 @@ defmodule BST do
 
   """
   @spec clear(tree()) :: tree()
-  def clear(%__MODULE__{} = tree) do
-    %__MODULE__{tree | root: nil, size: 0}
-  end
+  def clear(%__MODULE__{} = tree), do: %__MODULE__{tree | root: nil}
 
   @doc """
-  Returns the first `element` which `fun` returns `true` for using `element` as the first argument
+  Returns an element using `comparator` for lookup with `element` as the first argument,
+  or `nil` if not found
 
   ## Examples
 
       iex> tree = BST.new([0, 1])
       iex> BST.find(tree, 1)
       1
-      iex> tree = BST.new([%{id: 1, name: "Alice"}, %{id: 2, name: "Bob"}], fn a, b -> a.id <= b.id end)
-      iex> BST.find(tree, %{id: 1}, fn a, b -> a.id == b.id end)
+      iex> tree = BST.new([%{id: 1, name: "Alice"}, %{id: 2, name: "Bob"}], fn a, b -> a.id - b.id end)
+      iex> BST.find(tree, %{id: 1})
       %{id: 1, name: "Alice"}
 
   """
-  @spec find(tree(), element(), (element() -> any())) :: element() | nil
-  def find(%__MODULE__{} = tree, element, fun \\ fn a, b -> a == b end) do
-    find_node(tree.root, element, tree.comparator, fun)
+  @spec find(tree(), element()) :: element() | nil
+  def find(%__MODULE__{} = tree, element) do
+    do_find(tree.root, element, tree.comparator)
   end
 
-  defp find_node(nil, _element, _comparator, _fun), do: nil
+  defp do_find(nil, _element, _comparator), do: nil
 
-  defp find_node(%Node{data: elem1, left: left, right: right}, elem2, comparator, fun) do
-    cond do
-      fun.(elem1, elem2) -> elem1
-      comparator.(elem2, elem1) -> find_node(left, elem2, comparator, fun)
-      true -> find_node(right, elem2, comparator, fun)
+  defp do_find(%Node{data: elem1, left: left, right: right}, elem2, comparator) do
+    case compare(elem2, elem1, comparator) do
+      :eq -> elem1
+      :lt -> do_find(left, elem2, comparator)
+      :gt -> do_find(right, elem2, comparator)
     end
   end
 
@@ -199,15 +189,15 @@ defmodule BST do
   @spec to_list(tree()) :: [element()]
   def to_list(%__MODULE__{} = tree) do
     tree.root
-    |> list_nodes([])
+    |> do_list([])
     |> Enum.reverse()
   end
 
-  defp list_nodes(nil, acc), do: acc
+  defp do_list(nil, acc), do: acc
 
-  defp list_nodes(%Node{data: data, left: left, right: right}, acc) do
-    lower_values = list_nodes(left, acc)
-    list_nodes(right, [data | lower_values])
+  defp do_list(%Node{data: data, left: left, right: right}, acc) do
+    lower_values = do_list(left, acc)
+    do_list(right, [data | lower_values])
   end
 
   @doc """
@@ -241,4 +231,14 @@ defmodule BST do
   def max(%__MODULE__{root: node}), do: max(node)
   def max(%Node{data: data, right: nil}), do: data
   def max(%Node{right: %Node{} = node}), do: max(node)
+
+  defp compare(a, b, comparator) do
+    val = comparator.(a, b)
+
+    cond do
+      val == 0 -> :eq
+      val < 0 -> :lt
+      val > 0 -> :gt
+    end
+  end
 end
