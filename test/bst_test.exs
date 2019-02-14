@@ -20,7 +20,7 @@ defmodule BSTTest do
     end
   end
 
-  describe "insert/2" do
+  describe "insert/3" do
     test "inserts a lower value on the left" do
       tree = BST.insert(BST.new(0), -1)
 
@@ -119,7 +119,7 @@ defmodule BSTTest do
     end
   end
 
-  describe "remove/3" do
+  describe "remove/2" do
     test "removes root when it is the only node" do
       tree = BST.new(0)
 
@@ -238,7 +238,65 @@ defmodule BSTTest do
     end
   end
 
-  describe "find/3" do
+  describe "update/3" do
+    test "updates a node with the given function" do
+      tree =
+        BST.new([], fn a, b -> a.id - b.id end)
+        |> BST.insert(%{id: 1, name: "Alice", hobbies: ["Painting"]})
+        |> BST.insert(%{id: 2, name: "Bob", hobbies: ["Programming"]})
+        |> BST.insert(%{id: 3, name: "Charlie", hobbies: ["Running"]})
+        |> BST.update(%{id: 3, hobbies: ["Biking"]}, fn a, b ->
+          %{a | hobbies: [hd(b.hobbies) | a.hobbies]}
+        end)
+
+      assert BST.find(tree, %{id: 3}) == %{
+               id: 3,
+               name: "Charlie",
+               hobbies: ["Biking", "Running"]
+             }
+    end
+
+    test "removes the node if the given function returns nil" do
+      tree =
+        BST.new([], fn a, b -> a.id - b.id end)
+        |> BST.insert(%{id: 1, name: "Alice", hobbies: ["Painting"]})
+        |> BST.insert(%{id: 2, name: "Bob", hobbies: ["Programming"]})
+        |> BST.insert(%{id: 3, name: "Charlie", hobbies: ["Running"]})
+        |> BST.update(%{id: 2}, fn _a, _b -> nil end)
+
+      refute BST.find(tree, %{id: 2})
+      assert tree |> BST.to_list() |> length() == 2
+    end
+
+    test "promotes a node's subtree if it is removed" do
+      tree = BST.new([0, 2, 1])
+
+      assert tree.root.right.data == 2
+
+      tree = BST.update(tree, 2, fn _a, _b -> nil end)
+
+      refute BST.find(tree, 2)
+      assert tree.root.right.data == 1
+    end
+
+    test "does not modify the tree if a node is not found" do
+      %BST{root: %Node{data: 0, right: %Node{data: 1}, left: %Node{data: -1}}} =
+        tree = BST.new([0, -1, 1])
+
+      assert %BST{root: %{data: 0, right: %Node{data: 1}, left: %Node{data: -1}}} =
+               BST.update(tree, 2, fn _a, _b -> nil end)
+    end
+  end
+
+  describe "clear/1" do
+    test "clears all nodes from a tree" do
+      tree = BST.new([0, 1, 2])
+
+      assert %BST{root: nil} = BST.clear(tree)
+    end
+  end
+
+  describe "find/2" do
     test "returns an element in a tree" do
       tree = BST.new(0)
 
@@ -322,14 +380,6 @@ defmodule BSTTest do
         |> BST.insert(1)
 
       assert [-3, -2, -1, 0, 1, 2, 3] = BST.to_list(tree)
-    end
-  end
-
-  describe "clear/1" do
-    test "clears all nodes from a tree" do
-      tree = BST.new([0, 1, 2])
-
-      assert %BST{root: nil} = BST.clear(tree)
     end
   end
 

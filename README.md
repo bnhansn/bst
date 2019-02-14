@@ -68,13 +68,13 @@ iex> orders = [
 ...>   %{id: "b5a8b8b5-b600-42f4-a2c9-26b183effb0f", amount: 3, price: 99},
 ...>   %{id: "613e89eb-8a41-44c2-9b35-3178d3d7381d", amount: 3, price: 99}
 ...> ]
-iex> Enum.reduce(orders, tree, fn %{price: price} = order, tree ->
-...>   BST.insert(tree, %{price: price, orders: [order]}, fn a, b ->
-...>     %{orders: existing_orders} = a
-...>     %{orders: [new_order]} = b
-...>     %{a | orders: [new_order | existing_orders]}
-...>   end)
-...> end)
+iex> tree = Enum.reduce(orders, tree, fn %{price: price} = order, tree ->
+...>          BST.insert(tree, %{price: price, orders: [order]}, fn a, b ->
+...>            %{orders: existing_orders} = a
+...>            %{orders: [new_order]} = b
+...>            %{a | orders: [new_order | existing_orders]}
+...>          end)
+...>        end)
 %BST{
   comparator: #Function<12.128620087/2 in :erl_eval.expr/5>,
   root: %BST.Node{
@@ -89,6 +89,44 @@ iex> Enum.reduce(orders, tree, fn %{price: price} = order, tree ->
         orders: [
           %{amount: 3, id: "613e89eb-8a41-44c2-9b35-3178d3d7381d", price: 99},
           %{amount: 3, id: "b5a8b8b5-b600-42f4-a2c9-26b183effb0f", price: 99}
+        ],
+        price: 99
+      },
+      left: nil,
+      right: nil
+    },
+    right: %BST.Node{
+      data: %{
+        orders: [
+          %{amount: 6, id: "8ffa1e69-ec51-4cce-bdcb-22b55514b5e9", price: 105},
+          %{amount: 2, id: "90d96a3e-e6d2-4153-af51-619b552ee049", price: 105}
+        ],
+        price: 105
+      },
+      left: nil,
+      right: nil
+    }
+  }
+}
+iex> BST.update(tree, %{price: 99}, fn a, _b ->
+...>   case Enum.reject(a.orders, &(&1.id == "b5a8b8b5-b600-42f4-a2c9-26b183effb0f")) do
+...>     [] -> nil
+...>     orders -> %{a | orders: orders}
+...>   end
+...> end)
+%BST{
+  comparator: #Function<12.128620087/2 in :erl_eval.expr/5>,
+  root: %BST.Node{
+    data: %{
+      orders: [
+        %{amount: 1, id: "46dffef1-cfee-4752-8922-b458e055245f", price: 100}
+      ],
+      price: 100
+    },
+    left: %BST.Node{
+      data: %{
+        orders: [
+          %{amount: 3, id: "613e89eb-8a41-44c2-9b35-3178d3d7381d", price: 99}
         ],
         price: 99
       },

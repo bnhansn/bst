@@ -1,6 +1,6 @@
 defmodule BST do
   @moduledoc """
-  Binary search tree abstract data structure
+  A binary search tree abstract data structure.
   """
 
   alias BST.Node
@@ -11,7 +11,7 @@ defmodule BST do
   @type element :: term()
 
   @typedoc """
-  Function used to determine whether to place new nodes as a left or right subtree
+  Function used to determine whether to place new nodes as a left or right subtree.
 
   Returns
   - 0 if a == b
@@ -23,7 +23,7 @@ defmodule BST do
   @type tree :: %__MODULE__{root: Node.t() | nil, comparator: comparator()}
 
   @doc """
-  Creates a new `tree`
+  Creates a new `tree`.
 
   ## Examples
 
@@ -60,7 +60,7 @@ defmodule BST do
   end
 
   @doc """
-  Adds a node to a `tree`
+  Adds a node to a `tree`.
 
   Resolves conflicts using `fun` where `a` is the existing `element` and `b` is
   the new `element`. Defaults to replacing with the new `element`.
@@ -89,7 +89,7 @@ defmodule BST do
   end
 
   @doc """
-  Removes a node from a `tree` using the `comparator` for lookup
+  Removes a node from `tree` if one is found with data matching `element`.
 
   ## Examples
 
@@ -108,6 +108,8 @@ defmodule BST do
     %__MODULE__{tree | root: do_remove(tree.root, element, tree.comparator)}
   end
 
+  defp do_remove(nil, _element, _comparator), do: nil
+
   defp do_remove(%Node{data: elem1, left: left, right: right} = node, elem2, comparator) do
     case compare(elem2, elem1, comparator) do
       :eq -> promote(left, right, comparator)
@@ -115,8 +117,6 @@ defmodule BST do
       :gt -> %Node{node | right: do_remove(right, elem2, comparator)}
     end
   end
-
-  defp do_remove(nil, _element, _comparator), do: nil
 
   defp promote(nil, nil, _comparator), do: nil
   defp promote(%Node{} = left, nil, _comparator), do: left
@@ -132,7 +132,75 @@ defmodule BST do
   defp leftmost_child(%Node{left: %Node{} = node}), do: leftmost_child(node)
 
   @doc """
-  Removes all nodes from a `tree`
+  Updates a node using `fun`, but only if a node is found with the data in `element`.
+
+  `fun` will be invoked with the existing node's data as the first argument, and `element` as
+  the second argument. This allows the node to be looked up and updated all in one pass.
+  If `fun` returns `nil`, the node will be removed.
+
+  ## Examples
+
+      iex> tree =
+      ...>   BST.new([], fn a, b -> a.id - b.id end)
+      ...>   |> BST.insert(%{id: 1, name: "Alice", hobbies: ["Painting"]})
+      ...>   |> BST.insert(%{id: 2, name: "Bob", hobbies: ["Programming"]})
+      ...>   |> BST.update(%{id: 2, hobbies: ["Biking"]}, fn a, b ->
+      ...>     %{a | hobbies: [hd(b.hobbies) | a.hobbies]}
+      ...>   end)
+      iex> tree.root
+      %BST.Node{
+        data: %{hobbies: ["Painting"], id: 1, name: "Alice"},
+        left: nil,
+        right: %BST.Node{
+          data: %{hobbies: ["Biking", "Programming"], id: 2, name: "Bob"},
+          left: nil,
+          right: nil
+        }
+      }
+      iex> tree =
+      ...>   BST.update(tree, %{id: 1}, fn a, _b ->
+      ...>     case Enum.reject(a.hobbies, &(&1 == "Painting")) do
+      ...>       [] -> nil
+      ...>       hobbies -> %{a | hobbies: hobbies}
+      ...>     end
+      ...>   end)
+      iex> tree.root
+      %BST.Node{
+        data: %{hobbies: ["Biking", "Programming"], id: 2, name: "Bob"},
+        left: nil,
+        right: nil
+      }
+
+  """
+  @spec update(tree(), element(), (element(), element() -> element() | nil)) :: tree()
+  def update(%__MODULE__{} = tree, element, fun) when is_function(fun, 2) do
+    %__MODULE__{tree | root: do_update(tree.root, element, tree.comparator, fun)}
+  end
+
+  defp do_update(nil, _element, _comparator, _fun), do: nil
+
+  defp do_update(%Node{data: elem1, left: left, right: right} = node, elem2, comparator, fun) do
+    case compare(elem2, elem1, comparator) do
+      :eq -> update_or_promote(node, elem2, comparator, fun)
+      :lt -> %Node{node | left: do_update(left, elem2, comparator, fun)}
+      :gt -> %Node{node | right: do_update(right, elem2, comparator, fun)}
+    end
+  end
+
+  defp update_or_promote(
+         %Node{data: elem1, left: left, right: right} = node,
+         elem2,
+         comparator,
+         fun
+       ) do
+    case fun.(elem1, elem2) do
+      nil -> promote(left, right, comparator)
+      element -> %Node{node | data: element}
+    end
+  end
+
+  @doc """
+  Removes all nodes from a `tree`.
 
   ## Examples
 
@@ -146,8 +214,7 @@ defmodule BST do
   def clear(%__MODULE__{} = tree), do: %__MODULE__{tree | root: nil}
 
   @doc """
-  Returns an element using `comparator` for lookup with `element` as the first argument,
-  or `nil` if not found
+  Returns a node's data matching `element`, or `nil` if not found.
 
   ## Examples
 
@@ -175,7 +242,7 @@ defmodule BST do
   end
 
   @doc """
-  Returns a `list` of a `tree`'s `element`s in order
+  Returns a `list` of a `tree`'s `element`s in order.
 
   ## Examples
 
@@ -201,7 +268,7 @@ defmodule BST do
   end
 
   @doc """
-  Returns the minimum `element` in a `tree`, or `nil` if empty
+  Returns the minimum `element` in a `tree`, or `nil` if empty.
 
   ## Examples
 
@@ -217,7 +284,7 @@ defmodule BST do
   def min(%Node{left: %Node{} = node}), do: min(node)
 
   @doc """
-  Returns the maximum `element` in a `tree`, or `nil` if empty
+  Returns the maximum `element` in a `tree`, or `nil` if empty.
 
   ## Examples
 
