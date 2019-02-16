@@ -299,6 +299,31 @@ defmodule BST do
   def max(%Node{data: data, right: nil}), do: data
   def max(%Node{right: %Node{} = node}), do: max(node)
 
+  @doc """
+  Returns the height of a `tree`.
+
+  ## Examples
+
+      iex> tree = BST.new([0, -3, 5, 10])
+      iex> BST.height(tree)
+      2
+
+  """
+  @spec height(tree()) :: integer()
+  def height(%__MODULE__{root: nil} = _tree), do: -1
+
+  def height(%__MODULE__{root: root}) do
+    root
+    |> subtree_heights(0)
+    |> Enum.max()
+  end
+
+  defp subtree_heights(nil, _height), do: []
+
+  defp subtree_heights(%Node{left: left, right: right}, height) do
+    [height] ++ subtree_heights(left, height + 1) ++ subtree_heights(right, height + 1)
+  end
+
   defp compare(a, b, comparator) do
     val = comparator.(a, b)
 

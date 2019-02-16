@@ -410,4 +410,36 @@ defmodule BSTTest do
       assert nil == BST.max(tree)
     end
   end
+
+  describe "height/1" do
+    test "returns -1 if tree has no nodes" do
+      tree = BST.new([])
+
+      assert BST.height(tree) == -1
+    end
+
+    test "returns 0 if root is the only node" do
+      tree = BST.new(1)
+
+      assert BST.height(tree) == 0
+    end
+
+    test "returns height if longest subtree is farthest left" do
+      tree = BST.new([0, -1, 2, -5, -9])
+
+      assert BST.height(tree) == 3
+    end
+
+    test "returns height if longest subtree is farthest right" do
+      tree = BST.new([0, 1, 5, 9])
+
+      assert BST.height(tree) == 3
+    end
+
+    test "returns height if longest subtree is somewhere in middle" do
+      tree = BST.new([0, -2, -1, -3, 7, 1, 8, 6, 5, 4, 2])
+
+      assert BST.height(tree) == 6
+    end
+  end
 end
