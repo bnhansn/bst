@@ -47,10 +47,6 @@ defmodule BST do
 
   def new([], comparator), do: %__MODULE__{comparator: comparator}
 
-  def new(element, comparator) when not is_list(element) do
-    new([element], comparator)
-  end
-
   def new(elements, comparator) when is_list(elements) do
     tree = new([], comparator)
 
@@ -58,6 +54,8 @@ defmodule BST do
       insert(tree, element)
     end)
   end
+
+  def new(element, comparator), do: new([element], comparator)
 
   @doc """
   Adds a node to a `tree`.
@@ -75,16 +73,16 @@ defmodule BST do
   """
   @spec insert(tree(), element(), (element(), element() -> element())) :: tree()
   def insert(%__MODULE__{} = tree, element, fun \\ fn _a, b -> b end) do
-    %__MODULE__{tree | root: do_insert(tree.root, element, tree.comparator, fun)}
+    %__MODULE__{tree | root: insert_node(tree.root, element, tree.comparator, fun)}
   end
 
-  defp do_insert(nil, element, _comparator, _fun), do: %Node{data: element}
+  defp insert_node(nil, element, _comparator, _fun), do: %Node{data: element}
 
-  defp do_insert(%Node{data: elem1, left: left, right: right} = node, elem2, comparator, fun) do
+  defp insert_node(%Node{data: elem1, left: left, right: right} = node, elem2, comparator, fun) do
     case compare(elem2, elem1, comparator) do
       :eq -> %Node{node | data: fun.(elem1, elem2)}
-      :lt -> %Node{node | left: do_insert(left, elem2, comparator, fun)}
-      :gt -> %Node{node | right: do_insert(right, elem2, comparator, fun)}
+      :lt -> %Node{node | left: insert_node(left, elem2, comparator, fun)}
+      :gt -> %Node{node | right: insert_node(right, elem2, comparator, fun)}
     end
   end
 
@@ -105,16 +103,16 @@ defmodule BST do
   """
   @spec remove(tree(), element()) :: tree()
   def remove(%__MODULE__{} = tree, element) do
-    %__MODULE__{tree | root: do_remove(tree.root, element, tree.comparator)}
+    %__MODULE__{tree | root: remove_node(tree.root, element, tree.comparator)}
   end
 
-  defp do_remove(nil, _element, _comparator), do: nil
+  defp remove_node(nil, _element, _comparator), do: nil
 
-  defp do_remove(%Node{data: elem1, left: left, right: right} = node, elem2, comparator) do
+  defp remove_node(%Node{data: elem1, left: left, right: right} = node, elem2, comparator) do
     case compare(elem2, elem1, comparator) do
       :eq -> promote(left, right, comparator)
-      :lt -> %Node{node | left: do_remove(left, elem2, comparator)}
-      :gt -> %Node{node | right: do_remove(right, elem2, comparator)}
+      :lt -> %Node{node | left: remove_node(left, elem2, comparator)}
+      :gt -> %Node{node | right: remove_node(right, elem2, comparator)}
     end
   end
 
@@ -124,7 +122,7 @@ defmodule BST do
 
   defp promote(%Node{} = left, %Node{} = right, comparator) do
     %Node{data: element} = leftmost_child(right)
-    right = do_remove(right, element, comparator)
+    right = remove_node(right, element, comparator)
     %Node{data: element, left: left, right: right}
   end
 
@@ -174,27 +172,22 @@ defmodule BST do
   """
   @spec update(tree(), element(), (element(), element() -> element() | nil)) :: tree()
   def update(%__MODULE__{} = tree, element, fun) when is_function(fun, 2) do
-    %__MODULE__{tree | root: do_update(tree.root, element, tree.comparator, fun)}
+    %__MODULE__{tree | root: update_node(tree.root, element, tree.comparator, fun)}
   end
 
-  defp do_update(nil, _element, _comparator, _fun), do: nil
+  defp update_node(nil, _element, _comparator, _fun), do: nil
 
-  defp do_update(%Node{data: elem1, left: left, right: right} = node, elem2, comparator, fun) do
+  defp update_node(%Node{data: elem1, left: left, right: right} = node, elem2, comparator, fun) do
     case compare(elem2, elem1, comparator) do
       :eq -> update_or_promote(node, elem2, comparator, fun)
-      :lt -> %Node{node | left: do_update(left, elem2, comparator, fun)}
-      :gt -> %Node{node | right: do_update(right, elem2, comparator, fun)}
+      :lt -> %Node{node | left: update_node(left, elem2, comparator, fun)}
+      :gt -> %Node{node | right: update_node(right, elem2, comparator, fun)}
     end
   end
 
-  defp update_or_promote(
-         %Node{data: elem1, left: left, right: right} = node,
-         elem2,
-         comparator,
-         fun
-       ) do
+  defp update_or_promote(%Node{data: elem1} = node, elem2, comparator, fun) do
     case fun.(elem1, elem2) do
-      nil -> promote(left, right, comparator)
+      nil -> promote(node.left, node.right, comparator)
       element -> %Node{node | data: element}
     end
   end
@@ -228,16 +221,16 @@ defmodule BST do
   """
   @spec find(tree(), element()) :: element() | nil
   def find(%__MODULE__{} = tree, element) do
-    do_find(tree.root, element, tree.comparator)
+    find_node(tree.root, element, tree.comparator)
   end
 
-  defp do_find(nil, _element, _comparator), do: nil
+  defp find_node(nil, _element, _comparator), do: nil
 
-  defp do_find(%Node{data: elem1, left: left, right: right}, elem2, comparator) do
+  defp find_node(%Node{data: elem1, left: left, right: right}, elem2, comparator) do
     case compare(elem2, elem1, comparator) do
       :eq -> elem1
-      :lt -> do_find(left, elem2, comparator)
-      :gt -> do_find(right, elem2, comparator)
+      :lt -> find_node(left, elem2, comparator)
+      :gt -> find_node(right, elem2, comparator)
     end
   end
 
@@ -256,15 +249,15 @@ defmodule BST do
   @spec to_list(tree()) :: [element()]
   def to_list(%__MODULE__{} = tree) do
     tree.root
-    |> do_list([])
+    |> list_nodes([])
     |> Enum.reverse()
   end
 
-  defp do_list(nil, acc), do: acc
+  defp list_nodes(nil, acc), do: acc
 
-  defp do_list(%Node{data: data, left: left, right: right}, acc) do
-    lower_values = do_list(left, acc)
-    do_list(right, [data | lower_values])
+  defp list_nodes(%Node{data: data, left: left, right: right}, acc) do
+    lower_values = list_nodes(left, acc)
+    list_nodes(right, [data | lower_values])
   end
 
   @doc """
@@ -314,14 +307,14 @@ defmodule BST do
 
   def height(%__MODULE__{root: root}) do
     root
-    |> subtree_heights(0)
+    |> node_height(0)
     |> Enum.max()
   end
 
-  defp subtree_heights(nil, _height), do: []
+  defp node_height(nil, _height), do: []
 
-  defp subtree_heights(%Node{left: left, right: right}, height) do
-    [height] ++ subtree_heights(left, height + 1) ++ subtree_heights(right, height + 1)
+  defp node_height(%Node{left: left, right: right}, height) do
+    [height] ++ node_height(left, height + 1) ++ node_height(right, height + 1)
   end
 
   defp compare(a, b, comparator) do

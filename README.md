@@ -20,7 +20,7 @@ Tree with integer keys
 
 ```elixir
 iex> tree = BST.new()
-%BST{comparator: #Function<2.120876682/2 in BST.new/0>, root: nil, size: 0}
+%BST{comparator: #Function<2.120876682/2 in BST.new/0>, root: nil}
 iex> tree =
 ...>   tree |>
 ...>   BST.insert(0) |>
