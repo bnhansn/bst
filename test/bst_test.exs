@@ -381,6 +381,17 @@ defmodule BSTTest do
 
       assert [-3, -2, -1, 0, 1, 2, 3] = BST.to_list(tree)
     end
+
+    test "invokes fun on each element" do
+      tree =
+        BST.new([], fn a, b -> a.id - b.id end)
+        |> BST.insert(%{id: 1, name: "Alice"})
+        |> BST.insert(%{id: 4, name: "Dan"})
+        |> BST.insert(%{id: 3, name: "Charlie"})
+        |> BST.insert(%{id: 2, name: "Bob"})
+
+      assert ["Alice", "Bob", "Charlie", "Dan"] = BST.to_list(tree, fn a -> a.name end)
+    end
   end
 
   describe "min/1" do

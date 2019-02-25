@@ -214,6 +214,7 @@ defmodule BST do
       iex> tree = BST.new([0, 1])
       iex> BST.find(tree, 1)
       1
+
       iex> tree = BST.new([%{id: 1, name: "Alice"}, %{id: 2, name: "Bob"}], fn a, b -> a.id - b.id end)
       iex> BST.find(tree, %{id: 1})
       %{id: 1, name: "Alice"}
@@ -235,7 +236,9 @@ defmodule BST do
   end
 
   @doc """
-  Returns a `list` of a `tree`'s `element`s in order.
+  Returns a list of a `tree`'s `element`s in order.
+
+  Invokes `fun` on each `element` to transform it before adding it to the list.
 
   ## Examples
 
@@ -245,19 +248,27 @@ defmodule BST do
       ...> |> BST.to_list()
       [-1, 0, 1]
 
+      iex> tree =
+      ...>   BST.new([], fn a, b -> a.id - b.id end)
+      ...>   |> BST.insert(%{id: 1, name: "Alice"})
+      ...>   |> BST.insert(%{id: 3, name: "Charlie"})
+      ...>   |> BST.insert(%{id: 2, name: "Bob"})
+      iex> BST.to_list(tree, fn a -> a.name end)
+      ["Alice", "Bob", "Charlie"]
+
   """
-  @spec to_list(tree()) :: [element()]
-  def to_list(%__MODULE__{} = tree) do
+  @spec to_list(tree(), (element() -> any())) :: [element()]
+  def to_list(%__MODULE__{} = tree, fun \\ fn a -> a end) do
     tree.root
-    |> list_nodes([])
+    |> list_nodes([], fun)
     |> Enum.reverse()
   end
 
-  defp list_nodes(nil, acc), do: acc
+  defp list_nodes(nil, acc, _fun), do: acc
 
-  defp list_nodes(%Node{data: data, left: left, right: right}, acc) do
-    lower_values = list_nodes(left, acc)
-    list_nodes(right, [data | lower_values])
+  defp list_nodes(%Node{data: data, left: left, right: right}, acc, fun) do
+    lower_values = list_nodes(left, acc, fun)
+    list_nodes(right, [fun.(data) | lower_values], fun)
   end
 
   @doc """
