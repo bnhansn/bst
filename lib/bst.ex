@@ -283,9 +283,10 @@ defmodule BST do
   """
   @spec min(tree()) :: element() | nil
   def min(%__MODULE__{root: nil} = _tree), do: nil
-  def min(%__MODULE__{root: node}), do: min(node)
-  def min(%Node{data: data, left: nil}), do: data
-  def min(%Node{left: %Node{} = node}), do: min(node)
+  def min(%__MODULE__{root: node}), do: find_min(node)
+
+  defp find_min(%Node{data: data, left: nil}), do: data
+  defp find_min(%Node{left: %Node{} = node}), do: find_min(node)
 
   @doc """
   Returns the maximum `element` in a `tree`, or `nil` if empty.
@@ -299,9 +300,10 @@ defmodule BST do
   """
   @spec max(tree()) :: element() | nil
   def max(%__MODULE__{root: nil} = _tree), do: nil
-  def max(%__MODULE__{root: node}), do: max(node)
-  def max(%Node{data: data, right: nil}), do: data
-  def max(%Node{right: %Node{} = node}), do: max(node)
+  def max(%__MODULE__{root: node}), do: find_max(node)
+
+  defp find_max(%Node{data: data, right: nil}), do: data
+  defp find_max(%Node{right: %Node{} = node}), do: find_max(node)
 
   @doc """
   Returns the height of a `tree`.
