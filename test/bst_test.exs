@@ -10,7 +10,7 @@ defmodule BSTTest do
     end
 
     test "creates a tree with a root node when given one element" do
-      assert %BST{root: %Node{data: 0, left: nil, right: nil}} = BST.new(0)
+      assert %BST{root: %Node{data: 0, left: nil, right: nil}} = BST.new([0])
     end
 
     test "creates a tree with branches when given multiple elements" do
@@ -22,14 +22,14 @@ defmodule BSTTest do
 
   describe "insert/3" do
     test "inserts a lower value on the left" do
-      tree = BST.insert(BST.new(0), -1)
+      tree = BST.insert(BST.new([0]), -1)
 
       assert tree.root.data == 0
       assert tree.root.left.data == -1
     end
 
     test "inserts a higher value on the right" do
-      tree = BST.insert(BST.new(0), 1)
+      tree = BST.insert(BST.new([0]), 1)
 
       assert tree.root.data == 0
       assert tree.root.right.data == 1
@@ -37,7 +37,7 @@ defmodule BSTTest do
 
     test "inserts multiple branches" do
       tree =
-        BST.new(0)
+        BST.new([0])
         |> BST.insert(-2)
         |> BST.insert(2)
         |> BST.insert(-3)
@@ -55,7 +55,7 @@ defmodule BSTTest do
     end
 
     test "does not insert duplicate keys" do
-      assert %BST{root: %{data: 0, left: nil, right: nil}} = BST.insert(BST.new(0), 0)
+      assert %BST{root: %{data: 0, left: nil, right: nil}} = BST.insert(BST.new([0]), 0)
 
       list = [0, -2, 2, -3, -1, 3, 1]
       tree = BST.new(list)
@@ -121,7 +121,7 @@ defmodule BSTTest do
 
   describe "remove/2" do
     test "removes root when it is the only node" do
-      tree = BST.new(0)
+      tree = BST.new([0])
 
       assert tree.root.data == 0
 
@@ -298,7 +298,7 @@ defmodule BSTTest do
 
   describe "find/2" do
     test "returns an element in a tree" do
-      tree = BST.new(0)
+      tree = BST.new([0])
 
       assert 0 == BST.find(tree, 0)
     end
@@ -321,7 +321,7 @@ defmodule BSTTest do
     end
 
     test "returns nil if an element is not found" do
-      tree = BST.new(0)
+      tree = BST.new([0])
 
       assert nil == BST.find(tree, 1)
     end
@@ -352,26 +352,26 @@ defmodule BSTTest do
 
   describe "to_list/2" do
     test "returns one element in a list" do
-      tree = BST.new(0)
+      tree = BST.new([0])
 
       assert [0] == BST.to_list(tree)
     end
 
     test "returns lower elements ordered in a list" do
-      tree = BST.insert(BST.new(0), -1)
+      tree = BST.insert(BST.new([0]), -1)
 
       assert [-1, 0] == BST.to_list(tree)
     end
 
     test "returns higher elements ordered in a list" do
-      tree = BST.insert(BST.new(0), 1)
+      tree = BST.insert(BST.new([0]), 1)
 
       assert [0, 1] == BST.to_list(tree)
     end
 
     test "returns an ordered list of node values" do
       tree =
-        BST.new(0)
+        BST.new([0])
         |> BST.insert(-2)
         |> BST.insert(2)
         |> BST.insert(-3)
@@ -430,7 +430,7 @@ defmodule BSTTest do
     end
 
     test "returns 0 if root is the only node" do
-      tree = BST.new(1)
+      tree = BST.new([1])
 
       assert BST.height(tree) == 0
     end

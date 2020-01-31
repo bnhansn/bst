@@ -27,7 +27,7 @@ defmodule BST do
 
   ## Examples
 
-      iex> tree = BST.new(0)
+      iex> tree = BST.new([0])
       iex> tree.root
       %BST.Node{data: 0, left: nil, right: nil}
       iex> tree = BST.new([0, 1])
@@ -42,20 +42,15 @@ defmodule BST do
       }
 
   """
-  @spec new(element() | [element()], comparator()) :: tree()
+  @spec new([element()], comparator()) :: tree()
   def new(elements \\ [], comparator \\ fn a, b -> a - b end)
-
-  def new([], comparator), do: %__MODULE__{comparator: comparator}
-
-  def new(elements, comparator) when is_list(elements) do
-    tree = new([], comparator)
+      when is_list(elements) and is_function(comparator) do
+    tree = %__MODULE__{comparator: comparator}
 
     Enum.reduce(elements, tree, fn element, tree ->
       insert(tree, element)
     end)
   end
-
-  def new(element, comparator), do: new([element], comparator)
 
   @doc """
   Adds a node to a `tree`.
@@ -65,7 +60,7 @@ defmodule BST do
 
   ## Examples
 
-      iex> tree = BST.new(1)
+      iex> tree = BST.new([1])
       iex> tree = BST.insert(tree, 2)
       iex> tree.root
       %BST.Node{data: 1, left: nil, right: %BST.Node{data: 2, left: nil, right: nil}}
@@ -197,7 +192,7 @@ defmodule BST do
 
   ## Examples
 
-      iex> tree = BST.new(0)
+      iex> tree = BST.new([0])
       iex> tree = BST.clear(tree)
       iex> tree.root
       nil
@@ -242,7 +237,7 @@ defmodule BST do
 
   ## Examples
 
-      iex> BST.new(0)
+      iex> BST.new([0])
       ...> |> BST.insert(1)
       ...> |> BST.insert(-1)
       ...> |> BST.to_list()
